@@ -1,0 +1,44 @@
+/* The registry-card look, lifted from golden-watch so both surfaces match.
+   System fonts on purpose: these pages render personal data and a webfont CDN
+   would hand a third party an IP, a user agent and a referrer on every load. */
+:root{
+  --ink:#101B24; --ink-2:#18262F; --stock:#DFD9C8; --stock-hi:#EFEADC;
+  --rule:#A99F84; --stamp:#9E3223; --clear:#2F6B45; --pending:#9C6B0F;
+  --muted:#6E6650;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ink);
+  background-image:
+    radial-gradient(ellipse at 12% -10%, rgba(255,255,255,.06), transparent 55%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 4px);
+  color:var(--stock); font-family:var(--sans); font-size:15px; line-height:1.5;
+  padding:clamp(14px,3vw,40px); min-height:100vh;
+}
+.wrap{max-width:1240px;margin:0 auto}
+.masthead{border-bottom:2px solid var(--rule);padding-bottom:14px;margin-bottom:8px}
+.mast-title{font-weight:800;font-size:clamp(28px,5vw,46px);line-height:.98;
+  letter-spacing:-.02em;text-transform:uppercase;margin:0;color:var(--stock-hi)}
+.mast-sub{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--rule);margin-top:8px;
+  display:flex;flex-wrap:wrap;gap:4px 20px;align-items:center}
+.card{background:var(--stock);color:var(--ink);border-radius:2px;
+  padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--rule);
+  box-shadow:0 1px 0 rgba(0,0,0,.5),0 10px 26px -18px rgba(0,0,0,.9);
+  display:block;text-decoration:none}
+.card-name{font-weight:800;font-size:19px;letter-spacing:-.01em;margin:0}
+.card-body{margin:8px 0 0;font-size:14px;color:#2A2A22}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+button,.btn{font-family:var(--sans);font-size:13px;font-weight:600;padding:7px 14px;
+  border:1px solid var(--stock);border-radius:2px;background:var(--stock);
+  color:var(--ink);cursor:pointer;text-decoration:none;display:inline-block}
+button.ghost{background:transparent;color:var(--stock)}
+.muted{color:var(--rule);font-size:13px}
+.foot{margin-top:40px;padding-top:12px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--rule)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--pending);outline-offset:2px}
