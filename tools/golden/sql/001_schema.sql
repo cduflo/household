@@ -199,6 +199,15 @@ create table if not exists entity (
     url      text not null default '',
     email    text not null default '',
     sort     integer not null default 0,
+    -- 'config' rows are rewritten from config.yaml on every sweep.
+    -- 'ui' rows were captured from the board -- a referral reply arrives with
+    -- three kennel names and you add them from a phone before the reply is
+    -- closed. sync_entities must never clobber those.
+    source   text not null default 'config',
+    -- A ui row is a lead, not a watched target: nothing sweeps it until its
+    -- watch_urls land in config.yaml. The board says so on the card rather
+    -- than letting it look monitored when it isn't.
+    watched  integer not null default 0,
     at       double precision not null,
     primary key (app, kind, key)
 );

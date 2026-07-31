@@ -114,16 +114,23 @@ def sync_entities(con, cfg):
 def publish_entity(con, kind, key, name, subtitle="", detail="", url="", email="", sort=0):
     """Copy config identity into Postgres for the browser to render.
 
-    Config remains the source of truth -- this is rewritten on every sweep and
-    is not editable from the board. If a name is wrong here, config.yaml is
-    wrong.
+    Config is the source of truth for rows it owns: these are rewritten on
+    every sweep, so if a name is wrong here, config.yaml is wrong.
+
+    Rows captured from the board carry source='ui' and are left alone. That
+    matters because the highest-value moment in the search is a referral reply
+    arriving with three kennel names -- you want those on the board from a
+    phone in twenty seconds, and a sweep an hour later must not erase them.
     """
     con.execute(
-        """INSERT INTO entity (app, kind, key, name, subtitle, detail, url, email, sort, at)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """INSERT INTO entity (app, kind, key, name, subtitle, detail, url, email,
+                               sort, source, watched, at)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'config',1,%s)
            ON CONFLICT (app, kind, key) DO UPDATE SET
              name=excluded.name, subtitle=excluded.subtitle, detail=excluded.detail,
-             url=excluded.url, email=excluded.email, sort=excluded.sort, at=excluded.at""",
+             url=excluded.url, email=excluded.email, sort=excluded.sort,
+             source='config', watched=1, at=excluded.at
+           WHERE entity.source = 'config'""",
         (APP, kind, key, name, subtitle, detail, url, email, sort, time.time()))
 
 

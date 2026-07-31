@@ -21,6 +21,7 @@ const STAGE_LABEL = {
   out: "Closed", replied: "Replied", referred: "Sent names", dormant: "Dormant",
 };
 
+const APP = "golden";        // one Supabase project hosts every household tool
 let ME = null;
 let DATA = {};
 
@@ -29,17 +30,18 @@ const app = () => document.getElementById("app");
 async function loadAll() {
   const [state, notes, findings, commitments, events, contacts, templates] =
     await Promise.all([
-      sb.from("entity_state").select("*"),
-      sb.from("note").select("*").order("pinned", { ascending: false })
+      sb.from("entity_state").select("*").eq("app", APP),
+      sb.from("note").select("*").eq("app", APP).order("pinned", { ascending: false })
         .order("at", { ascending: false }),
       sb.from("finding").select("*").eq("dismissed", 0)
         .order("found_at", { ascending: false }),
-      sb.from("commitment").select("*").eq("done", 0).order("on_date"),
-      sb.from("event").select("*").order("at", { ascending: false }).limit(80),
+      sb.from("commitment").select("*").eq("app", APP).eq("done", 0).order("on_date"),
+      sb.from("event").select("*").eq("app", APP)
+        .order("at", { ascending: false }).limit(80),
       sb.from("contact").select("direction"),
-      sb.from("template").select("key,label,subject,body"),
+      sb.from("template").select("key,label,subject,body").eq("app", APP),
     ]);
-  const { data: entities } = await sb.from("entity").select("*").order("sort");
+  const { data: entities } = await sb.from("entity").select("*").eq("app", APP).order("sort");
   DATA = {
     state: state.data || [], notes: notes.data || [], findings: findings.data || [],
     commitments: commitments.data || [], events: events.data || [],
@@ -138,6 +140,12 @@ function entityCard(kind, key) {
   card.append(top);
   const line = [cfg.subtitle, cfg.detail].filter(Boolean).join(" — ");
   if (line) card.append(el("p", "card-body", line));
+  if (cfg.source === "ui" && !cfg.watched) {
+    // Be honest that nothing is crawling this yet -- a card that looks
+    // monitored but is not is worse than no card.
+    card.append(el("div", "card-note",
+      "Lead — not being watched. Add its watch_urls to config.yaml to sweep it."));
+  }
   if (cfg.email) {
     const m = el("div", "card-note");
     const a = el("a", "", cfg.email);
@@ -163,8 +171,8 @@ function entityCard(kind, key) {
   }
   sel.onchange = async () => {
     await sb.from("entity_state").upsert(
-      { kind, key, stage: sel.value, updated_at: Date.now() / 1000 },
-      { onConflict: "kind,key" });
+      { app: APP, kind, key, stage: sel.value, updated_at: Date.now() / 1000 },
+      { onConflict: "app,kind,key" });
     await logEvent("stage", `${cfg.name}: → ${STAGE_LABEL[sel.value]}`, kind, key);
     await refresh();
   };
@@ -175,8 +183,8 @@ function entityCard(kind, key) {
     const b = el("button", "star" + (i <= (st.rating || 0) ? " on" : ""), "★");
     b.onclick = async () => {
       await sb.from("entity_state").upsert(
-        { kind, key, stage: st.stage, rating: i, updated_at: Date.now() / 1000 },
-        { onConflict: "kind,key" });
+        { app: APP, kind, key, stage: st.stage, rating: i, updated_at: Date.now() / 1000 },
+        { onConflict: "app,kind,key" });
       await logEvent("rating", `${cfg.name}: rated ${i}/5`, kind, key);
       await refresh();
     };
@@ -219,7 +227,7 @@ function entityCard(kind, key) {
   add.onclick = async () => {
     if (!input.value.trim()) return;
     await sb.from("note").insert({
-      kind, key, author: ME.email, body: input.value,
+      app: APP, kind, key, author: ME.email, body: input.value,
       pinned: 0, at: Date.now() / 1000,
     });
     input.value = "";
@@ -233,7 +241,7 @@ function entityCard(kind, key) {
 
 async function logEvent(verb, summary, kind = "", key = "") {
   await sb.from("event").insert({
-    at: Date.now() / 1000, actor: ME.email, kind, key, verb, summary, meta: "{}",
+    app: APP, at: Date.now() / 1000, actor: ME.email, kind, key, verb, summary, meta: "{}",
   });
 }
 
@@ -251,9 +259,9 @@ async function logContact(kind, key, direction) {
     : direction === "in" && ["new", "contacted"].includes(st.stage)
       ? (kind === "club" ? "replied" : "talking") : st.stage;
   await sb.from("entity_state").upsert({
-    kind, key, stage, ball: direction === "out" ? "them" : "us",
+    app: APP, kind, key, stage, ball: direction === "out" ? "them" : "us",
     updated_at: Date.now() / 1000,
-  }, { onConflict: "kind,key" });
+  }, { onConflict: "app,kind,key" });
   await logEvent(`contact_${direction}`,
     `${cfg.name}: ${direction === "out" ? "sent" : "received"}${summary ? " — " + summary : ""}`,
     kind, key);
@@ -341,7 +349,7 @@ function draw() {
   b.onclick = async () => {
     if (!d.value || !w.value.trim()) return;
     await sb.from("commitment").insert({
-      on_date: d.value, what: w.value, done: 0, at: Date.now() / 1000,
+      app: APP, on_date: d.value, what: w.value, done: 0, at: Date.now() / 1000,
     });
     d.value = ""; w.value = "";
     await refresh();
@@ -360,6 +368,7 @@ function draw() {
     const grid = el("div", "grid");
     rows.forEach((e) => grid.append(entityCard(kind, e.key)));
     root.append(grid);
+    root.append(addForm(kind));
   }
 
   root.append(heading("Activity"));
@@ -372,6 +381,65 @@ function draw() {
     log.append(r);
   }
   root.append(DATA.events.length ? log : el("div", "empty", "Nothing logged yet."));
+}
+
+/** Capture a breeder or club from the board.
+ *
+ *  This is the write that grows the search. A club referral desk replies with
+ *  three kennel names and they need to land somewhere in under a minute,
+ *  usually from a phone, before the reply is closed and forgotten.
+ *
+ *  It writes to Postgres, never to config.yaml -- the Python never sees a
+ *  half-typed kennel name, and `yaml.safe_dump` stays nowhere near a file whose
+ *  comments carry the reasoning. The row is marked source='ui' so the next
+ *  sweep leaves it alone, and watched=0 because nothing is crawling it yet.
+ *
+ *  Provenance is captured because "Rose at CRVGRC suggested I write to you" is
+ *  the strongest opening line available, and it is the first thing forgotten.
+ */
+function addForm(kind) {
+  const wrap = el("div", "row");
+  const name = document.createElement("input");
+  name.type = "text";
+  name.placeholder = kind === "breeder" ? "Kennel name" : "Club name";
+  name.style.minWidth = "170px";
+  const site = document.createElement("input");
+  site.type = "text"; site.placeholder = "https://…"; site.style.minWidth = "160px";
+  const via = document.createElement("input");
+  via.type = "text"; via.placeholder = "Referred by (e.g. Rose at CRVGRC)";
+  via.style.flex = "1"; via.style.minWidth = "180px";
+
+  const add = el("button", "", kind === "breeder" ? "Add breeder" : "Add club");
+  add.onclick = async () => {
+    const n = name.value.trim();
+    if (!n) { name.focus(); return; }
+    const key = n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32);
+    if (DATA.entities.some((e) => e.kind === kind && e.key === key)) {
+      alert(`${n} is already on the board.`); return;
+    }
+    add.disabled = true;
+    const { error } = await sb.from("entity").insert({
+      app: APP, kind, key, name: n,
+      subtitle: via.value.trim() ? `via ${via.value.trim()}` : "",
+      detail: "", url: site.value.trim(), email: "",
+      sort: 999, source: "ui", watched: 0, at: Date.now() / 1000,
+    });
+    if (error) { alert(error.message); add.disabled = false; return; }
+    await sb.from("entity_state").upsert(
+      { app: APP, kind, key, stage: "new", updated_at: Date.now() / 1000 },
+      { onConflict: "app,kind,key" });
+    if (via.value.trim()) {
+      await sb.from("note").insert({
+        app: APP, kind, key, author: ME.email,
+        body: `Referred by ${via.value.trim()}`, pinned: 1, at: Date.now() / 1000,
+      });
+    }
+    await logEvent("added", `${n} added${via.value.trim() ? " via " + via.value.trim() : ""}`,
+                   kind, key);
+    await refresh();
+  };
+  wrap.append(name, site, via, add);
+  return wrap;
 }
 
 function heading(text, count) {

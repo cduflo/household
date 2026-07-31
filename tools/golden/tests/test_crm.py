@@ -214,3 +214,26 @@ def test_events_and_commitments_are_scoped_too(con):
     con.execute("INSERT INTO event (app, at, verb, summary) VALUES ('lease',1.0,'x','theirs')")
     assert [c["what"] for c in crm.commitments(con)] == ["ours"]
     assert all("theirs" != e["summary"] for e in crm.events(con))
+
+
+def test_a_lead_captured_from_the_board_survives_the_next_sweep(con):
+    """The highest-value moment in the search is a referral reply arriving with
+    three kennel names. You add them from a phone; an hour later the sweep runs
+    and must not erase them."""
+    con.execute(
+        "INSERT INTO entity (app, kind, key, name, source, watched, at)"
+        " VALUES ('golden','breeder','sunfire','Sunfire Goldens','ui',0,1.0)")
+    crm.sync_entities(con, {"clubs": [], "breeders": []})
+    row = con.execute("SELECT name, source, watched FROM entity"
+                      " WHERE key='sunfire'").fetchone()
+    assert row["name"] == "Sunfire Goldens"
+    assert row["source"] == "ui" and row["watched"] == 0
+
+
+def test_config_still_owns_the_rows_it_declares(con):
+    cfg = {"clubs": [], "breeders": [{"key": "meirzah", "name": "Meirzah"}]}
+    crm.sync_entities(con, cfg)
+    con.execute("UPDATE entity SET name='stale' WHERE key='meirzah'")
+    crm.sync_entities(con, cfg)
+    row = con.execute("SELECT name, watched FROM entity WHERE key='meirzah'").fetchone()
+    assert row["name"] == "Meirzah" and row["watched"] == 1
