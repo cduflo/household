@@ -186,11 +186,14 @@ function entityCard(kind, key) {
   card.append(row);
 
   const acts = el("div", "row");
-  if (ME.isOwner) {
-    const d = el("button", "", "Draft email");
-    d.onclick = () => openDraft(kind, key);
-    acts.append(d);
-  }
+  // Everyone in the household drafts. The earlier owner-only gate was left over
+  // from when drafts rendered server-side from owner.local.yaml -- there,
+  // withholding them meant something. Here the values come from the viewer's
+  // own localStorage, so gating protected nothing and merely stopped her
+  // writing to breeders about her own household.
+  const d = el("button", "", "Draft email");
+  d.onclick = () => openDraft(kind, key);
+  acts.append(d);
   const rep = el("button", "ghost", "Log reply");
   rep.onclick = () => logContact(kind, key, "in");
   const sent = el("button", "ghost", "Log sent");
