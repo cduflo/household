@@ -1,0 +1,15 @@
+# Nothing identifying anybody is tracked. This repo is public.
+owner.local.yaml
+contacts.local.yaml
+.env
+.env.supabase
+state.db
+dashboard.html
+sweep.log
+serve.log
+.sweep.lock
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+sql/003_seed.sql

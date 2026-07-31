@@ -10,18 +10,18 @@
 // session cannot produce a draft even though it can read the templates.
 //
 // The trade is that you re-enter four fields per browser. Worth it: the
-// alternative puts a six-year-old's routine on someone else's disk to save a
+// alternative puts a child's routine on someone else's disk to save a
 // one-minute form.
 import { el } from "../shared/auth.js";
 
 const KEY = "golden.owner.v1";
 
 export const FIELDS = [
-  { k: "phone", label: "Phone", hint: "(860) 555-0100" },
+  { k: "phone", label: "Phone", hint: "(555) 555-0100" },
   { k: "dog_history", label: "Dogs you've had", multiline: true,
-    hint: "we've had dogs all our lives — huskies, pit bulls, wheatens, and most recently a maltipoo who lived to 13" },
+    hint: "breeds you have owned, and how long they lived" },
   { k: "household", label: "Your household", multiline: true,
-    hint: "who's home during the day, kids and ages, the yard situation, how the dog would be exercised" },
+    hint: "who is home during the day, the yard situation, how the dog gets exercised" },
   { k: "temperament", label: "What you want in the dog", multiline: true,
     hint: "a steady family companion, temperament first — sound, biddable, easy with kids" },
 ];

@@ -1,0 +1,332 @@
+# golden-watch configuration
+# Everything the watcher knows about lives here. Edit freely; `gw run` reads it fresh.
+
+owner:
+  name: Chris
+  base: West Hartford, CT
+  max_miles: 250
+  timezone: America/New_York
+
+  # Used verbatim by `gw draft`. Written the way you'd actually say it out loud.
+  # household lives in owner.local.yaml (untracked) — it describes when the
+  # house is occupied and how a child moves through the neighborhood.
+  temperament: >-
+    a steady family companion, temperament first — sound, biddable, easy with
+    kids and with a house that has people coming and going
+  lifestyle: >-
+    outdoors constantly — hiking, the Farmington River trail, beach trips down to
+    the CT and RI shore
+  # phone, daughter_age and dog_history live in owner.local.yaml (untracked).
+  # See owner.local.yaml.sample.
+  vet_reference: false   # not in contact with the old vet; don't offer one
+
+# ---------------------------------------------------------------------------
+# TARGETING
+#
+# line: show | field | dual | any
+#   Goldens are one breed but two populations that split decades ago. American
+#   conformation lines run blockier, lighter coated, lower drive. Field lines run
+#   leaner, darker, and carry a work ethic that does not switch off. For a family
+#   companion in a house where two people work from home, show lines are the
+#   better fit — and the titles on the parents tell you which you're looking at
+#   before anyone gets a chance to describe a temperament to you.
+#
+#   gw/lines.py does the reading. CH / GCH / BISS are conformation. FC / AFC / MH
+#   are field. JH, WC, WCX, CD, agility and dock titles are earned by both and
+#   prove nothing about line, which is a common source of confusion.
+#
+# sex: a preference, not a filter. Breeders match individual puppies to homes,
+#   and being rigid about sex moves you down waitlists for no real gain. State it
+#   once, then let them place the right dog.
+# ---------------------------------------------------------------------------
+preferences:
+  line: show
+
+  # Hard filter, not a lean. It costs waitlist position and that's accepted:
+  # a golden litter runs about eight, roughly half female, and a show breeder
+  # often holds one back for the ring — so realistically two or three available
+  # females per litter. The right response to a hard constraint is to state it
+  # early and plainly so breeders self-select, rather than discovering the
+  # mismatch after they've worked you up the list.
+  sex: female
+  sex_is_flexible: false
+
+  # Timing is the constraint that flexes. Fall is preferred; spring is fine.
+  # Contact windows key off the earlier date so nothing is missed, and the
+  # fallback is what makes the December Specialty the anchor event rather than
+  # a nice-to-have.
+  target_fallback_date: 2027-04-15
+
+  # When you want a puppy actually home. Drives the contact windows below.
+  # Yankee GRC, in writing: "it's best to contact us about 2 months before you
+  # are ready to bring home a puppy." Puppies go home at ~8 weeks, and breeders
+  # only list with referral when a litter is within a few weeks or already on
+  # the ground. So a referral desk contacted a year out has nothing to give you.
+  target_home_date: 2026-10-15
+
+telegram:
+  # Create a bot with @BotFather, then message it once and grab your chat id
+  # from https://api.telegram.org/bot<TOKEN>/getUpdates
+  # Leave blank to read from env: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID
+  bot_token: ""
+  chat_id: ""
+
+watcher:
+  # Be a good citizen. These are volunteer-run sites on cheap hosting.
+  min_interval_hours: 12
+  request_delay_seconds: 4
+  user_agent: "golden-watch/1.0 (personal puppy search; contact: you@example.com)"
+  alert_threshold: 3
+
+# ---------------------------------------------------------------------------
+# CLUB REFERRALS
+#
+# Verified July 2026. Every New England GRCA member club gates litter listings
+# behind a human volunteer — none publish litters on the open web. So these are
+# not scrape targets. They are a contact cadence: the watcher flags a club when
+# it has gone stale, and you send the email.
+# ---------------------------------------------------------------------------
+clubs:
+  # Ordered by approximate drive time from West Hartford. Sourced from GRCA's
+  # official club list, July 2026 — which corrects two things:
+  #   * Vermont has NO GRCA member club. The "Green Mountain GRC" that turns up
+  #     in AKC's club search is not on GRCA's roster; dropped.
+  #   * New Hampshire and Rhode Island have none either.
+  # Each club refers only to its own members, confirmed in writing by Yankee, so
+  # there is no overlap to exploit. Thirteen clubs means thirteen conversations.
+
+  # ---- inside an hour ----
+  - key: sbgrc
+    name: Southern Berkshire GRC
+    territory: Hartford CT -> Springfield MA
+    drive: "10 min"
+    referral_contact: ""
+    referral_email: ""
+    url: https://www.sbgrc.org/puppyreferral
+    method: email
+    recontact_days: 45
+    next_event: "your Specialty at the Big E on December 5th"
+
+  - key: crvgrc
+    name: Connecticut River Valley GRC
+    territory: Enfield CT
+    drive: "30 min"
+    referral_contact: ""
+    referral_email: ""
+    url: https://www.crvgrc.org/breeder/
+    method: email
+    recontact_days: 45
+
+  # ---- one to two hours ----
+  - key: hvgrc
+    name: Hudson Valley GRC
+    territory: Brewster NY / tri-state
+    drive: "1h45"
+    referral_contact: ""
+    referral_email: ""
+    url: https://hvgrc.org/main/puppy-referral/
+    method: web_form
+    recontact_days: 45
+
+  - key: ygrc
+    name: Yankee GRC
+    territory: Boston MA — members mostly MA, some NH/ME/VT
+    drive: "1h45"
+    referral_contact: ""
+    referral_email: ""
+    url: http://yankeegrc.org/BreederContact.asp
+    method: email
+    contact_lead_days: 75
+    note: >
+      Their June 2026 reply: no Connecticut breeders, refers only to own members,
+      and "contact us about 2 months before you are ready to bring home a puppy."
+      Date-triggered rather than polled. Kaele already wrote in June — acknowledge
+      that rather than arriving as a stranger.
+
+  - key: nenygrc
+    name: Northeastern New York GRC
+    territory: Albany NY
+    drive: "2h"
+    referral_contact: ""
+    referral_email: ""
+    url: http://nenygrclub.info/
+    method: unknown
+    recontact_days: 45
+
+  # ---- two to four hours ----
+  - key: gsgrc
+    name: Garden State GRC
+    territory: Morristown NJ
+    drive: "2h45"
+    referral_contact: ""
+    referral_email: ""
+    url: http://www.gsgrc.org/
+    method: unknown
+    recontact_days: 60
+
+  - key: ligrc
+    name: Long Island GRC
+    territory: Central Islip NY
+    drive: "2h45"
+    referral_contact: ""
+    referral_email: ""
+    url: http://www.ligrc.org/
+    method: unknown
+    recontact_days: 60
+
+  - key: mgrc
+    name: Maine GRC
+    territory: Lewiston ME
+    drive: "3h15"
+    referral_contact: ""
+    referral_email: ""
+    url: http://www.mainegoldenretrieverclub.org/
+    method: unknown
+    recontact_days: 60
+
+  - key: lenape
+    name: Lenape GRC
+    territory: Quakertown PA
+    drive: "3h30"
+    referral_contact: ""
+    referral_email: ""
+    url: http://www.lenapegrc.org/
+    method: unknown
+    recontact_days: 60
+
+  - key: njpbgrc
+    name: New Jersey Pine Barrens GRC
+    territory: Medford NJ
+    drive: "3h30"
+    referral_contact: ""
+    referral_email: ""
+    url: http://www.njpbgrc.org/
+    method: unknown
+    recontact_days: 60
+
+  # ---- the long drives. Worth it only for the right puppy. ----
+  - key: autumnvalley
+    name: Autumn Valley GRC of the Southern Tier
+    territory: Vestal NY
+    drive: "4h"
+    referral_contact: ""
+    referral_email: ""
+    url: http://www.autumnvalley.org/
+    method: unknown
+    recontact_days: 90
+
+  - key: grccny
+    name: GRC of Central New York
+    territory: Syracuse NY
+    drive: "4h30"
+    referral_contact: ""
+    referral_email: ""
+    url: http://www.grccny.org/
+    method: unknown
+    recontact_days: 90
+
+  - key: grcwny
+    name: GRC of Western New York
+    territory: Batavia NY
+    drive: "6h"
+    referral_contact: ""
+    referral_email: ""
+    url: http://grcwny.org/
+    method: unknown
+    recontact_days: 90
+
+  - key: gpgrc
+    name: Greater Pittsburgh GRC
+    territory: Pittsburgh PA
+    drive: "8h"
+    referral_contact: ""
+    referral_email: ""
+    url: http://www.gpgrc.org/
+    method: unknown
+    recontact_days: 90
+
+  # ---- reference, not a contact ----
+  - key: grca_evaluate
+    name: GRCA — What You Should Expect From A Good Breeder
+    territory: Reference
+    referral_contact: ""
+    referral_email: ""
+    url: https://grca.org/wp-content/uploads/2022/03/What-You-Should-Expect-From-A-Good-Breeder.pdf
+    method: reference
+    note: "Recommended by the Yankee referral desk. Read before the first breeder call."
+
+  - key: grca
+    name: GRCA national puppy referral
+    territory: National
+    referral_contact: ""
+    referral_email: ""
+    url: https://grca.org/find-a-golden/where-to-find-a-golden/
+    method: web
+    recontact_days: 90
+
+# ---------------------------------------------------------------------------
+# PAGES TO WATCH
+#
+# type: litter   -> diff for litter announcements, alert loudly
+# type: events   -> club calendars; showing up in person is the real back door
+# type: referral -> club referral pages; alert only if they start publishing
+# ---------------------------------------------------------------------------
+watch:
+  # The `focus` tag matters more than it looks. Conformation people and field
+  # people are largely different crowds in different rooms, and you want the
+  # conformation rooms.
+  - key: sbgrc_events
+    label: SBGRC calendar
+    url: https://www.sbgrc.org/
+    type: events
+    focus: mixed
+    note: >
+      Fun match and specialty draw conformation. Hunt test at Nod Brook and
+      WC/WCX draw field. Big E public education draws both and is the easiest
+      room to walk into cold.
+  - key: hvgrc_events
+    label: HVGRC calendar
+    url: https://hvgrc.org/main/calendar-list/
+    type: events
+    focus: mixed
+    note: >
+      The September all-breed health clinic is the highest-value date on either
+      calendar: a room full of breeders getting hips, elbows and hearts done.
+  - key: sbgrc_referral
+    label: SBGRC puppy referral
+    url: https://www.sbgrc.org/puppyreferral
+    type: referral
+  - key: ygrc_referral
+    label: Yankee GRC referral
+    url: http://yankeegrc.org/BreederContact.asp
+    type: referral
+  - key: crvgrc_referral
+    label: CRVGRC breeder referral
+    url: https://www.crvgrc.org/breeder/
+    type: referral
+
+# ---------------------------------------------------------------------------
+# BREEDERS
+#
+# This is the list that actually matters, and it starts nearly empty on purpose.
+# You fill it from club referral replies, from AKC conformation results, and from
+# talking to people at the club events above. `gw add-breeder` appends here
+# without eating these comments.
+#
+# kennel_prefix: the registered name prefix, used for OFA lookup
+# line:          show | field | dual | unknown — run `gw line` on their pedigree
+#                page to set this rather than guessing from photos
+# watch_urls:    pages that change when a litter is planned
+# ---------------------------------------------------------------------------
+breeders:
+  - key: meirzah
+    name: Meirzah Golden Retrievers
+    kennel_prefix: Meirzah
+    location: Northeast
+    site: https://www.meirzahgoldenretrievers.com/
+    watch_urls:
+      - https://www.meirzahgoldenretrievers.com/
+    email: ""
+    status: researching        # researching | contacted | replied | waitlist | passed
+    line: unknown              # set from parent titles, not from the photos
+    notes: "States GRCA Code of Ethics adherence; publishes dam status and OFA timing on site."

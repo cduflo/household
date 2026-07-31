@@ -1,0 +1,17 @@
+# Referral volunteers. Gitignored, and deliberately so.
+#
+# These are real people's names and personal addresses, harvested from club
+# pages. They never consented to being republished, and this repo is public.
+# The tracked config carries the club, the URL and the cadence; who to write to
+# lives here, on this machine only.
+#
+# Merged by club key at load time. Without this file every club reads as having
+# no contact route, which is the correct failure: the tool says it cannot write
+# to anyone rather than quietly inventing an address.
+#
+# Generated with yaml.dump so names containing quotes -- Katherine "Katie" Von
+# Culin -- are escaped properly rather than breaking the parse.
+clubs:
+  sbgrc:
+    referral_contact: Firstname Lastname
+    referral_email: someone@example.com

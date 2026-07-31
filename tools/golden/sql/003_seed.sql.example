@@ -1,0 +1,22 @@
+-- Seed the allowlist. Copy to 003_seed.sql (gitignored), put the real
+-- addresses in, and run it in the Supabase SQL editor.
+--
+-- THIS MUST RUN IN THE SQL EDITOR, NOT FROM THE APP.
+--
+-- There is a bootstrapping problem otherwise: the policy on household_member
+-- says only an owner may write to it, and is_owner() checks household_member.
+-- While the table is empty nobody is an owner, so nobody can insert the first
+-- row — including you. The table would be permanently unwritable through the
+-- API.
+--
+-- The SQL editor runs as the table owner, and the policies use ENABLE rather
+-- than FORCE row level security, so the owner is not subject to them. That is
+-- the intended escape hatch and the only one.
+
+insert into household_member (email, role) values
+    ('you@gmail.com',     'owner'),
+    ('partner@gmail.com', 'household')
+on conflict (email) do update set role = excluded.role;
+
+-- Email is matched case-insensitively by app_email(), which lowercases the JWT
+-- claim — so store these lowercase or the comparison silently never matches.

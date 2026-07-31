@@ -1,5 +1,15 @@
-# Nothing secret belongs in this repo — it is public and GitHub Pages serves
-# every file in it. The Supabase anon key IS meant to be here; RLS is what
-# protects the data. Never add a service_role key or a DB password.
+# This repo is public. Nothing identifying anybody belongs in it.
+*.local.yaml
+.env
+.env.supabase
+state.db
+dashboard.html
+*.log
+.sweep.lock
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
 .DS_Store
 node_modules/
+sql/003_seed.sql
