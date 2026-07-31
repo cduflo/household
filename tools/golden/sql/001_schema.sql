@@ -229,3 +229,15 @@ create table if not exists template (
     at      double precision not null default extract(epoch from now()),
     primary key (app, key)
 );
+
+
+-- ---------------------------------------------------------------- alters
+--
+-- `create table if not exists` skips the whole statement when the table is
+-- already there, so a new column in a block above never reaches an existing
+-- database. Postgres has ADD COLUMN IF NOT EXISTS -- which SQLite did not,
+-- and which is why the old version-numbered migration runner existed. Adding
+-- a column is a line here, and this file stays safely re-runnable.
+
+alter table entity add column if not exists source  text not null default 'config';
+alter table entity add column if not exists watched integer not null default 1;
