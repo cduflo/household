@@ -73,9 +73,20 @@ create table if not exists run_log (
 
 -- ---------------------------------------------------------------- crm
 --
+-- `app` makes six of these multi-tenant, because one Supabase free project
+-- hosts every household tool. note, event and commitment are shared on purpose
+-- -- one activity log and one calendar across all the tools beats four of
+-- each. entity, entity_state and template are shared because a second tool
+-- wants exactly the same shape: things with names, things with a stage and a
+-- rating, and boilerplate text.
+--
+-- Tables below without an `app` column are golden-specific. A new tool adds its
+-- own with a `<tool>_` prefix rather than widening these.
+--
 -- Composite (kind, key) everywhere: club keys and breeder keys share one
 -- namespace and a bare key would silently merge two entities.
 create table if not exists entity_state (
+    app             text not null default 'golden',
     kind            text not null,
     key             text not null,
     stage           text not null,
@@ -83,11 +94,12 @@ create table if not exists entity_state (
     ball            text not null default '',
     next_contact_on text not null default '',
     updated_at      double precision not null,
-    primary key (kind, key)
+    primary key (app, kind, key)
 );
 
 create table if not exists note (
     id     bigint generated always as identity primary key,
+    app    text not null default 'golden',
     kind   text not null,
     key    text not null,
     author text not null default '',
@@ -95,7 +107,7 @@ create table if not exists note (
     pinned integer not null default 0,
     at     double precision not null
 );
-create index if not exists note_entity on note (kind, key, at desc);
+create index if not exists note_entity on note (app, kind, key, at desc);
 
 create table if not exists checklist (
     kind  text not null,
@@ -109,6 +121,7 @@ create table if not exists checklist (
 
 create table if not exists event (
     id      bigint generated always as identity primary key,
+    app     text not null default 'golden',
     at      double precision not null,
     actor   text not null default '',
     kind    text not null default '',
@@ -122,6 +135,7 @@ create index if not exists event_entity on event (kind, key, at desc);
 
 create table if not exists commitment (
     id      bigint generated always as identity primary key,
+    app     text not null default 'golden',
     on_date text not null,
     what    text not null,
     kind    text not null default '',
@@ -176,6 +190,7 @@ create table if not exists litter (
 -- every sweep. Nothing here is editable from the board -- if a name is wrong,
 -- config.yaml is wrong.
 create table if not exists entity (
+    app      text not null default 'golden',
     kind     text not null,
     key      text not null,
     name     text not null,
@@ -185,7 +200,7 @@ create table if not exists entity (
     email    text not null default '',
     sort     integer not null default 0,
     at       double precision not null,
-    primary key (kind, key)
+    primary key (app, kind, key)
 );
 
 -- ---------------------------------------------------------------- templates
@@ -196,10 +211,12 @@ create table if not exists entity (
 -- never come here: they live in owner.local.yaml on the Mac and in the
 -- browser's localStorage, and are substituted client-side.
 create table if not exists template (
-    key     text primary key,
+    app     text not null default 'golden',
+    key     text not null,
     label   text not null,
     subject text not null,
     body    text not null,
     fields  text not null default '[]',
-    at      double precision not null default extract(epoch from now())
+    at      double precision not null default extract(epoch from now()),
+    primary key (app, key)
 );

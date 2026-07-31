@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Lease Board</title>
+<link rel="stylesheet" href="../shared/base.css">
+<script src="../shared/vendor/supabase.min.js"></script>
+</head><body>
+<div class="wrap">
+  <header class="masthead">
+    <h1 class="mast-title">Lease Board</h1>
+    <div class="mast-sub">
+      <span id="who"></span>
+      <button class="ghost" id="reload">Refresh</button>
+      <button class="ghost" id="signout">Sign out</button>
+      <a class="ghost btn" href="../">All tools</a>
+    </div>
+  </header>
+  <p class="muted" id="basis"></p>
+  <div id="app"><p class="muted">Loading…</p></div>
+  <footer class="foot">
+    Monthly figures are normalised to $0 due at signing and 12k mi/yr, so they
+    compare like with like. Ratings and notes are shared between both of you.
+  </footer>
+</div>
+<script type="module" src="lease.js"></script>
+</body></html>

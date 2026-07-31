@@ -175,3 +175,42 @@ def test_every_mutation_writes_an_event(con):
     crm.set_item(con, "breeder", "m", "site_reviewed", "pass")
     verbs = {e["verb"] for e in crm.events(con, kind="breeder", key="m")}
     assert verbs == {"stage", "rating", "note", "checklist"}
+
+
+# ---------------------------------------------------------------- tenancy
+
+def test_another_tool_sharing_the_database_is_invisible(con):
+    """One Supabase free project hosts every household tool, so note, event,
+    commitment, entity, entity_state and template are shared. Golden must not
+    see -- or clobber -- another app's rows."""
+    crm.set_stage(con, "breeder", "meirzah", "talking")
+    crm.add_note(con, "breeder", "meirzah", "ours")
+    con.execute("INSERT INTO note (app, kind, key, body, at)"
+                " VALUES ('lease','car','ioniq5','theirs',1.0)")
+    con.execute("INSERT INTO entity_state (app, kind, key, stage, updated_at)"
+                " VALUES ('lease','car','ioniq5','shortlist',1.0)")
+
+    assert [n["body"] for n in crm.notes(con, "breeder", "meirzah")] == ["ours"]
+    assert all(s["app"] == "golden" for s in crm.all_states(con).values())
+    assert crm.get_state(con, "car", "ioniq5") is None
+
+
+def test_the_same_key_can_exist_in_two_apps(con):
+    """`entity_state` is keyed (app, kind, key), so a collision across tools is
+    impossible rather than merely unlikely."""
+    crm.set_stage(con, "breeder", "shared-key", "talking")
+    con.execute("INSERT INTO entity_state (app, kind, key, stage, updated_at)"
+                " VALUES ('lease','breeder','shared-key','x',1.0)")
+    n = con.execute("SELECT COUNT(*) AS n FROM entity_state WHERE key='shared-key'"
+                    ).fetchone()["n"]
+    assert n == 2
+    assert crm.get_state(con, "breeder", "shared-key")["stage"] == "talking"
+
+
+def test_events_and_commitments_are_scoped_too(con):
+    crm.add_commitment(con, "2026-09-13", "ours")
+    con.execute("INSERT INTO commitment (app, on_date, what, at)"
+                " VALUES ('lease','2026-09-14','theirs',1.0)")
+    con.execute("INSERT INTO event (app, at, verb, summary) VALUES ('lease',1.0,'x','theirs')")
+    assert [c["what"] for c in crm.commitments(con)] == ["ours"]
+    assert all("theirs" != e["summary"] for e in crm.events(con))

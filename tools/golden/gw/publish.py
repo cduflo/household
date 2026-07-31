@@ -75,12 +75,12 @@ def publish(con, cfg, today=None):
     drafts = build(cfg, today)
     for d in drafts:
         con.execute(
-            """INSERT INTO template (key, label, subject, body, fields, at)
-               VALUES (%s,%s,%s,%s,%s,%s)
-               ON CONFLICT (key) DO UPDATE SET
+            """INSERT INTO template (app, key, label, subject, body, fields, at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)
+               ON CONFLICT (app, key) DO UPDATE SET
                  label=excluded.label, subject=excluded.subject,
                  body=excluded.body, fields=excluded.fields, at=excluded.at""",
-            (d["key"], d["label"], d["subject"], d["body"],
+            ("golden", d["key"], d["label"], d["subject"], d["body"],
              json.dumps(list(PERSONAL)), time.time()),
         )
     return len(drafts)

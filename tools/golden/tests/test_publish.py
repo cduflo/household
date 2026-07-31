@@ -35,7 +35,7 @@ def test_derived_logic_is_already_baked_in():
     d = next(x for x in publish.build(CFG) if x["key"] == "club:sbgrc:near_term")
     assert "autumn" in d["body"]
     assert "set on a female" in d["body"]
-    assert "Hi Jennifer" in d["body"]
+    assert "Hi Pat" in d["body"]
 
 
 def test_subject_is_split_out():

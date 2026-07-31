@@ -109,3 +109,5 @@ details summary{cursor:pointer;font-family:var(--mono);font-size:10.5px;
   letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
 .field input,.field textarea{width:100%}
 .field textarea{min-height:70px}
+.card.dim{opacity:.5}
+.btn{line-height:1.6}

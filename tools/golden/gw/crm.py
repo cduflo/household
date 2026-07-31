@@ -14,20 +14,25 @@ import time
 
 from . import model
 
+#: One Supabase project hosts every household tool, so the shared tables carry
+#: an `app` column. Golden's Python only ever handles golden, so it is a
+#: constant here rather than a parameter threaded through forty call sites.
+APP = "golden"
+
 
 # ---------------------------------------------------------------- events
 
 def log_event(con, verb, summary, kind="", key="", meta=None, actor=""):
     con.execute(
-        "INSERT INTO event (at, kind, key, verb, summary, meta, actor)"
-        " VALUES (%s,%s,%s,%s,%s,%s,%s)",
-        (time.time(), kind, key, verb, summary, json.dumps(meta or {}), actor),
+        "INSERT INTO event (app, at, kind, key, verb, summary, meta, actor)"
+        " VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+        (APP, time.time(), kind, key, verb, summary, json.dumps(meta or {}), actor),
     )
 
 
 def events(con, kind=None, key=None, verb=None, limit=200):
-    sql = "SELECT * FROM event WHERE 1=1"
-    args = []
+    sql = "SELECT * FROM event WHERE app = %s"
+    args = [APP]
     if kind:
         sql += " AND kind = %s"
         args.append(kind)
@@ -46,7 +51,8 @@ def events(con, kind=None, key=None, verb=None, limit=200):
 
 def get_state(con, kind, key):
     row = con.execute(
-        "SELECT * FROM entity_state WHERE kind = %s AND key = %s", (kind, key)
+        "SELECT * FROM entity_state WHERE app = %s AND kind = %s AND key = %s",
+        (APP, kind, key)
     ).fetchone()
     return row
 
@@ -57,15 +63,16 @@ def ensure_state(con, kind, key, stage=None):
     if existing:
         return existing
     con.execute(
-        "INSERT INTO entity_state (kind, key, stage, updated_at) VALUES (%s,%s,%s,%s)",
-        (kind, key, stage or model.initial_stage(kind), time.time()),
+        "INSERT INTO entity_state (app, kind, key, stage, updated_at)"
+        " VALUES (%s,%s,%s,%s,%s)",
+        (APP, kind, key, stage or model.initial_stage(kind), time.time()),
     )
     return get_state(con, kind, key)
 
 
 def all_states(con):
     return {(r["kind"], r["key"]): r
-            for r in con.execute("SELECT * FROM entity_state")}
+            for r in con.execute("SELECT * FROM entity_state WHERE app = %s", (APP,))}
 
 
 #: config.yaml's original five-value `status:` vocabulary, mapped onto the
@@ -112,12 +119,12 @@ def publish_entity(con, kind, key, name, subtitle="", detail="", url="", email="
     wrong.
     """
     con.execute(
-        """INSERT INTO entity (kind, key, name, subtitle, detail, url, email, sort, at)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
-           ON CONFLICT (kind, key) DO UPDATE SET
+        """INSERT INTO entity (app, kind, key, name, subtitle, detail, url, email, sort, at)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+           ON CONFLICT (app, kind, key) DO UPDATE SET
              name=excluded.name, subtitle=excluded.subtitle, detail=excluded.detail,
              url=excluded.url, email=excluded.email, sort=excluded.sort, at=excluded.at""",
-        (kind, key, name, subtitle, detail, url, email, sort, time.time()))
+        (APP, kind, key, name, subtitle, detail, url, email, sort, time.time()))
 
 
 def set_stage(con, kind, key, stage, label=None):
@@ -125,8 +132,9 @@ def set_stage(con, kind, key, stage, label=None):
         raise ValueError(f"{stage!r} is not a {kind} stage")
     before = ensure_state(con, kind, key)["stage"]
     con.execute(
-        "UPDATE entity_state SET stage = %s, updated_at = %s WHERE kind = %s AND key = %s",
-        (stage, time.time(), kind, key),
+        "UPDATE entity_state SET stage = %s, updated_at = %s"
+        " WHERE app = %s AND kind = %s AND key = %s",
+        (stage, time.time(), APP, kind, key),
     )
     log_event(con, "stage", f"{label or key}: {model.STAGE_LABELS.get(before, before)}"
                             f" → {model.STAGE_LABELS.get(stage, stage)}",
@@ -138,8 +146,9 @@ def set_rating(con, kind, key, rating, label=None):
     value = model.clamp_rating(rating)
     ensure_state(con, kind, key)
     con.execute(
-        "UPDATE entity_state SET rating = %s, updated_at = %s WHERE kind = %s AND key = %s",
-        (value, time.time(), kind, key),
+        "UPDATE entity_state SET rating = %s, updated_at = %s"
+        " WHERE app = %s AND kind = %s AND key = %s",
+        (value, time.time(), APP, kind, key),
     )
     log_event(con, "rating", f"{label or key}: rated {value}/5 — "
                              f"{model.RATING_LABELS[value]}", kind, key, {"rating": value})
@@ -156,8 +165,9 @@ def set_ball(con, kind, key, ball, label=None):
         raise ValueError("ball must be '', 'us' or 'them'")
     ensure_state(con, kind, key)
     con.execute(
-        "UPDATE entity_state SET ball = %s, updated_at = %s WHERE kind = %s AND key = %s",
-        (ball, time.time(), kind, key),
+        "UPDATE entity_state SET ball = %s, updated_at = %s"
+        " WHERE app = %s AND kind = %s AND key = %s",
+        (ball, time.time(), APP, kind, key),
     )
     log_event(con, "ball", f"{label or key}: ball with {ball or 'nobody'}", kind, key)
     return ball
@@ -172,9 +182,9 @@ def set_next_contact(con, kind, key, on_date, label=None):
     """
     ensure_state(con, kind, key)
     con.execute(
-        "UPDATE entity_state SET next_contact_on = %s, updated_at = %s "
-        "WHERE kind = %s AND key = %s",
-        (on_date or "", time.time(), kind, key),
+        "UPDATE entity_state SET next_contact_on = %s, updated_at = %s"
+        " WHERE app = %s AND kind = %s AND key = %s",
+        (on_date or "", time.time(), APP, kind, key),
     )
     log_event(con, "schedule",
               f"{label or key}: next contact {on_date or 'cleared'}", kind, key)
@@ -188,9 +198,9 @@ def add_note(con, kind, key, body, pinned=0, label=None, author=""):
     if not body:
         raise ValueError("empty note")
     row = con.execute(
-        "INSERT INTO note (kind, key, body, pinned, at, author)"
-        " VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
-        (kind, key, body, 1 if pinned else 0, time.time(), author),
+        "INSERT INTO note (app, kind, key, body, pinned, at, author)"
+        " VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+        (APP, kind, key, body, 1 if pinned else 0, time.time(), author),
     ).fetchone()
     log_event(con, "note", f"{label or key}: {body[:80]}", kind, key, actor=author)
     return row["id"]
@@ -220,13 +230,14 @@ def set_note_pinned(con, note_id, pinned):
 
 def notes(con, kind, key):
     return [r for r in con.execute(
-        "SELECT * FROM note WHERE kind = %s AND key = %s ORDER BY pinned DESC, at DESC",
-        (kind, key))]
+        "SELECT * FROM note WHERE app = %s AND kind = %s AND key = %s"
+        " ORDER BY pinned DESC, at DESC", (APP, kind, key))]
 
 
 def all_notes(con):
     out = {}
-    for r in con.execute("SELECT * FROM note ORDER BY pinned DESC, at DESC"):
+    for r in con.execute("SELECT * FROM note WHERE app = %s"
+                         " ORDER BY pinned DESC, at DESC", (APP,)):
         out.setdefault((r["kind"], r["key"]), []).append(r)
     return out
 
@@ -270,19 +281,19 @@ def add_commitment(con, on_date, what, kind="", key="", note=""):
     if not model.parse_iso(on_date):
         raise ValueError("commitment needs an ISO date")
     row = con.execute(
-        "INSERT INTO commitment (on_date, what, kind, key, note, at)"
-        " VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
-        (on_date, what, kind, key, note, time.time()),
+        "INSERT INTO commitment (app, on_date, what, kind, key, note, at)"
+        " VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+        (APP, on_date, what, kind, key, note, time.time()),
     ).fetchone()
     log_event(con, "commitment", f"{on_date}: {what}", kind, key)
     return row["id"]
 
 
 def commitments(con, include_done=False):
-    sql = "SELECT * FROM commitment"
+    sql = "SELECT * FROM commitment WHERE app = %s"
     if not include_done:
-        sql += " WHERE done = 0"
-    return [r for r in con.execute(sql + " ORDER BY on_date")]
+        sql += " AND done = 0"
+    return [r for r in con.execute(sql + " ORDER BY on_date", (APP,))]
 
 
 def complete_commitment(con, commitment_id, done=1):
