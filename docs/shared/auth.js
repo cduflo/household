@@ -11,9 +11,9 @@
 //
 // So the sign-in below is deliberately permissive and the data is not. The page
 // asking "who are you" is a convenience for rendering; it is never the control.
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
-
-export const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+// config.js is a classic script loaded before this module, so window.GW is
+// already populated. See the note in that file about module deferral.
+export const sb = window.supabase.createClient(window.GW.url, window.GW.key, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });
 

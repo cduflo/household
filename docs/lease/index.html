@@ -218,11 +218,7 @@ a.rate:hover .sc{text-decoration:underline}
 }
 </style>
 <script src="../shared/vendor/supabase.min.js"></script>
-<script type="module">
-  import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../shared/config.js";
-  window.GW = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY };
-  window.dispatchEvent(new Event("gw-config"));
-</script>
+<script src="../shared/config.js"></script>
 </head>
 <body>
 <div id="gate" hidden style="max-width:640px;margin:12vh auto;padding:0 20px;
