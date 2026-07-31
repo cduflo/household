@@ -7,7 +7,7 @@
 # so durability is a local encrypted-at-rest snapshot instead of a commit.
 set -uo pipefail
 
-REPO="/Users/chrisduflo/golden-watch"
+REPO="/Users/chrisduflo/household/tools/golden"
 BACKUP_DIR="$HOME/Library/Mobile Documents/com~apple~CloudDocs/golden-watch-backup"
 KEEP=14
 
