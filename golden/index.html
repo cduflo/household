@@ -1,14 +1,29 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
 <title>Golden Watch</title>
 <link rel="stylesheet" href="../shared/base.css">
-</head><body><div class="wrap">
-<header class="masthead">
-  <h1 class="mast-title">Golden Watch</h1>
-  <div class="mast-sub"><span>Not wired up yet</span></div>
-</header>
-<p class="muted">Waiting on the Supabase project. Once it exists this page signs
-in with Google and shows the board.</p>
-<p><a class="btn" href="../">Back</a></p>
-</div></body></html>
+<!-- Vendored, not from a CDN. This page renders a household's private notes;
+     a third-party script host would see every visit, and a compromised CDN
+     would have a live session to work with. Pinned copy of
+     @supabase/supabase-js 2.45.4. -->
+<script src="../shared/vendor/supabase.min.js"></script>
+</head><body>
+<div class="wrap">
+  <header class="masthead">
+    <h1 class="mast-title">Golden Watch</h1>
+    <div class="mast-sub">
+      <span id="who"></span>
+      <button class="ghost" id="reload">Refresh</button>
+      <button class="ghost" id="signout">Sign out</button>
+    </div>
+  </header>
+  <div id="app"><p class="muted">Loading…</p></div>
+  <footer class="foot">
+    Clearances are audited on the sire and dam of a specific breeding, not on a
+    kennel. Nothing here sends email.
+  </footer>
+</div>
+<script type="module" src="board.js"></script>
+</body></html>
