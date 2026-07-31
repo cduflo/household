@@ -39,13 +39,18 @@ async function loadAll() {
       sb.from("contact").select("direction"),
       sb.from("template").select("key,label,subject,body"),
     ]);
+  const { data: entities } = await sb.from("entity").select("*").order("sort");
   DATA = {
     state: state.data || [], notes: notes.data || [], findings: findings.data || [],
     commitments: commitments.data || [], events: events.data || [],
     contacts: contacts.data || [], templates: templates.data || [],
+    entities: entities || [],
   };
 }
 
+const entityOf = (kind, key) =>
+  DATA.entities.find((e) => e.kind === kind && e.key === key)
+  || { kind, key, name: key, subtitle: "", detail: "", url: "", email: "" };
 const stateOf = (kind, key) =>
   DATA.state.find((s) => s.kind === kind && s.key === key)
   || { kind, key, stage: "new", rating: 0, ball: "", next_contact_on: "" };
@@ -120,8 +125,9 @@ function findingCard(f) {
   return card;
 }
 
-function entityCard(kind, cfg) {
-  const st = stateOf(kind, cfg.key);
+function entityCard(kind, key) {
+  const cfg = entityOf(kind, key);
+  const st = stateOf(kind, key);
   const card = el("article", "card" + (st.ball === "us" ? " warm" : ""));
   const top = el("div", "card-top");
   top.append(el("h3", "card-name", cfg.name));
@@ -130,9 +136,16 @@ function entityCard(kind, cfg) {
   else if (st.ball === "them") meta.textContent = "waiting on them";
   top.append(meta);
   card.append(top);
-  if (cfg.sub) card.append(el("p", "card-body", cfg.sub));
+  const line = [cfg.subtitle, cfg.detail].filter(Boolean).join(" — ");
+  if (line) card.append(el("p", "card-body", line));
+  if (cfg.email) {
+    const m = el("div", "card-note");
+    const a = el("a", "", cfg.email);
+    a.href = "mailto:" + cfg.email;
+    m.append(a); card.append(m);
+  }
 
-  const pinned = notesOf(kind, cfg.key).find((n) => n.pinned);
+  const pinned = notesOf(kind, key).find((n) => n.pinned);
   if (pinned) {
     const p = el("div", "card-note", pinned.body);
     p.style.borderLeft = "2px solid var(--pending)";
@@ -150,9 +163,9 @@ function entityCard(kind, cfg) {
   }
   sel.onchange = async () => {
     await sb.from("entity_state").upsert(
-      { kind, key: cfg.key, stage: sel.value, updated_at: Date.now() / 1000 },
+      { kind, key, stage: sel.value, updated_at: Date.now() / 1000 },
       { onConflict: "kind,key" });
-    await logEvent("stage", `${cfg.name}: → ${STAGE_LABEL[sel.value]}`, kind, cfg.key);
+    await logEvent("stage", `${cfg.name}: → ${STAGE_LABEL[sel.value]}`, kind, key);
     await refresh();
   };
   row.append(sel);
@@ -162,9 +175,9 @@ function entityCard(kind, cfg) {
     const b = el("button", "star" + (i <= (st.rating || 0) ? " on" : ""), "★");
     b.onclick = async () => {
       await sb.from("entity_state").upsert(
-        { kind, key: cfg.key, stage: st.stage, rating: i, updated_at: Date.now() / 1000 },
+        { kind, key, stage: st.stage, rating: i, updated_at: Date.now() / 1000 },
         { onConflict: "kind,key" });
-      await logEvent("rating", `${cfg.name}: rated ${i}/5`, kind, cfg.key);
+      await logEvent("rating", `${cfg.name}: rated ${i}/5`, kind, key);
       await refresh();
     };
     stars.append(b);
@@ -175,21 +188,21 @@ function entityCard(kind, cfg) {
   const acts = el("div", "row");
   if (ME.isOwner) {
     const d = el("button", "", "Draft email");
-    d.onclick = () => openDraft(kind, cfg);
+    d.onclick = () => openDraft(kind, key);
     acts.append(d);
   }
   const rep = el("button", "ghost", "Log reply");
-  rep.onclick = () => logContact(kind, cfg, "in");
+  rep.onclick = () => logContact(kind, key, "in");
   const sent = el("button", "ghost", "Log sent");
-  sent.onclick = () => logContact(kind, cfg, "out");
+  sent.onclick = () => logContact(kind, key, "out");
   acts.append(sent, rep);
   card.append(acts);
 
   // notes
   const det = document.createElement("details");
-  det.append(el("summary", "", `Notes (${notesOf(kind, cfg.key).length})`));
+  det.append(el("summary", "", `Notes (${notesOf(kind, key).length})`));
   const list = el("ul", "notes");
-  for (const n of notesOf(kind, cfg.key)) {
+  for (const n of notesOf(kind, key)) {
     const li = el("li", n.pinned ? "pin" : "", n.body);
     li.append(el("time", "", `${n.author || "?"} · ${new Date(n.at * 1000).toLocaleString()}`));
     list.append(li);
@@ -203,7 +216,7 @@ function entityCard(kind, cfg) {
   add.onclick = async () => {
     if (!input.value.trim()) return;
     await sb.from("note").insert({
-      kind, key: cfg.key, author: ME.email, body: input.value,
+      kind, key, author: ME.email, body: input.value,
       pinned: 0, at: Date.now() / 1000,
     });
     input.value = "";
@@ -221,36 +234,38 @@ async function logEvent(verb, summary, kind = "", key = "") {
   });
 }
 
-async function logContact(kind, cfg, direction) {
+async function logContact(kind, key, direction) {
+  const cfg = entityOf(kind, key);
   const summary = prompt(direction === "out"
     ? "Anything to remember about what you sent?"
     : "What did they say?") ?? "";
   await sb.from("contact").insert({
-    target_key: cfg.key, target_type: kind, direction,
+    target_key: key, target_type: kind, direction,
     channel: "email", summary, at: Date.now() / 1000,
   });
-  const st = stateOf(kind, cfg.key);
+  const st = stateOf(kind, key);
   const stage = direction === "out" && st.stage === "new" ? "contacted"
     : direction === "in" && ["new", "contacted"].includes(st.stage)
       ? (kind === "club" ? "replied" : "talking") : st.stage;
   await sb.from("entity_state").upsert({
-    kind, key: cfg.key, stage, ball: direction === "out" ? "them" : "us",
+    kind, key, stage, ball: direction === "out" ? "them" : "us",
     updated_at: Date.now() / 1000,
   }, { onConflict: "kind,key" });
   await logEvent(`contact_${direction}`,
     `${cfg.name}: ${direction === "out" ? "sent" : "received"}${summary ? " — " + summary : ""}`,
-    kind, cfg.key);
+    kind, key);
   await refresh();
 }
 
 // ---------------------------------------------------------------- drafts
 
-function openDraft(kind, cfg) {
+function openDraft(kind, key) {
+  const cfg = entityOf(kind, key);
   if (!drafts.haveAll()) {
-    drafts.promptForValues(() => openDraft(kind, cfg));
+    drafts.promptForValues(() => openDraft(kind, key));
     return;
   }
-  const options = DATA.templates.filter((t) => t.key.startsWith(`${kind}:${cfg.key}:`));
+  const options = DATA.templates.filter((t) => t.key.startsWith(`${kind}:${key}:`));
   if (!options.length) { alert("No draft for this one yet — run a sweep."); return; }
 
   const values = drafts.load();
@@ -294,9 +309,9 @@ function openDraft(kind, cfg) {
     setTimeout(() => (copy.textContent = "Copy"), 1500);
   };
   const marksent = el("button", "ghost", "Copied — log it as sent");
-  marksent.onclick = async () => { back.remove(); await logContact(kind, cfg, "out"); };
+  marksent.onclick = async () => { back.remove(); await logContact(kind, key, "out"); };
   const edit = el("button", "ghost", "Edit my details");
-  edit.onclick = () => { back.remove(); drafts.promptForValues(() => openDraft(kind, cfg)); };
+  edit.onclick = () => { back.remove(); drafts.promptForValues(() => openDraft(kind, key)); };
   const close = el("button", "ghost", "Close");
   close.onclick = () => back.remove();
   row.append(copy, marksent, edit, close);
@@ -336,17 +351,13 @@ function draw() {
   if (urgent.length) urgent.forEach((f) => root.append(findingCard(f)));
   else root.append(el("div", "empty", "Nothing needs you right now."));
 
-  const breeders = DATA.state.filter((s) => s.kind === "breeder");
-  root.append(heading("Breeders", breeders.length));
-  const bg = el("div", "grid");
-  breeders.forEach((s) => bg.append(entityCard("breeder", { key: s.key, name: s.key })));
-  root.append(bg);
-
-  const clubs = DATA.state.filter((s) => s.kind === "club");
-  root.append(heading("Club referrals", clubs.length));
-  const cg = el("div", "grid");
-  clubs.forEach((s) => cg.append(entityCard("club", { key: s.key, name: s.key })));
-  root.append(cg);
+  for (const [kind, title] of [["breeder", "Breeders"], ["club", "Club referrals"]]) {
+    const rows = DATA.entities.filter((e) => e.kind === kind);
+    root.append(heading(title, rows.length));
+    const grid = el("div", "grid");
+    rows.forEach((e) => grid.append(entityCard(kind, e.key)));
+    root.append(grid);
+  }
 
   root.append(heading("Activity"));
   const log = el("div", "log");
