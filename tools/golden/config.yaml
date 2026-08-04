@@ -330,3 +330,15 @@ breeders:
     status: researching        # researching | contacted | replied | waitlist | passed
     line: unknown              # set from parent titles, not from the photos
     notes: "States GRCA Code of Ethics adherence; publishes dam status and OFA timing on site."
+
+  - key: liberty-lionswatch
+    name: "Liberty LionsWatch"
+    kennel_prefix: ""
+    location: ""
+    site: "https://www.libertylionswatch.com/our-puppies"
+    email: ""
+    status: "researching"
+    line: "unknown"
+    watch_urls:
+      - https://www.libertylionswatch.com/our-puppies
+    notes: "Litters due Aug and Sep 2026, puppies available now. $4,000, $500 deposit. Also breeds Havanese. No OFA, health testing or GRCA Code of Ethics mentioned on the puppies page; no AKC titles on the parents shown."
